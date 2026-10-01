@@ -690,9 +690,19 @@ async function aiGenerate(){
     toast("AI design tayyar hai!");
     im.scrollIntoView({ behavior:"smooth", block:"center" });
   }catch(err){
-    toast("AI error: " + err.message);
+    toast(friendlyAiError(err.message));
   }
   btn.disabled = false; btn.textContent = "✨ AI se Edit karo";
+}
+function friendlyAiError(msg){
+  msg = String(msg || "");
+  if(/image nahi bheji/.test(msg)){ return "AI se image nahi mili — prompt badal ke dobara try karein"; }
+  if(/429/.test(msg)){ return "Aaj ki free limit khatam — thodi der baad ya kal dobara try karein"; }
+  if(/400/.test(msg) && /key/i.test(msg)){ return "API key galat lag rahi hai — dobara copy karke save karein"; }
+  if(/400/.test(msg)){ return "Request me masla hai — prompt badal ke try karein"; }
+  if(/403/.test(msg)){ return "Key ka access band hai — AI Studio me nayi key banayein"; }
+  if(/failed to fetch|networkerror|load failed/i.test(msg)){ return "Internet ka masla — connection check karke dobara try karein"; }
+  return "AI error: " + msg.slice(0,140);
 }
 function downloadAi(){
   if(!aiResultData){ return; }
