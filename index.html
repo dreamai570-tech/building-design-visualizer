@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Building Design Visualizer</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1830">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#0b1830;color:#fff;min-height:100vh}
+.app{width:100%;max-width:1280px;margin:0 auto;padding:10px}
+header.brand{background:linear-gradient(135deg,#0b1830,#16294d);border:1px solid #c9a227;border-radius:14px;padding:12px 14px;display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.brand-logo{width:46px;height:46px;border-radius:10px;background:#c9a227;color:#0b1830;font-weight:900;font-size:22px;display:flex;align-items:center;justify-content:center}
+.brand-title{font-size:18px;font-weight:900;letter-spacing:.5px}
+.brand-sub{font-size:11px;color:#c9a227;font-weight:700}
+.tabs{display:flex;gap:6px;margin-bottom:10px;overflow-x:auto}
+.tabs button{flex:1;white-space:nowrap;border:1px solid #2a3d63;background:#12234a;color:#fff;border-radius:10px;padding:11px 8px;font-size:12px;font-weight:800;cursor:pointer}
+.tabs button.active{background:#c9a227;color:#0b1830;border-color:#c9a227}
+.canvas-card{background:#fff;border-radius:14px;padding:8px;margin-bottom:10px}
+#cv{width:100%;display:block;border-radius:8px;touch-action:none;background:#e8ecf2;cursor:crosshair}
+.panel{display:none;background:#12234a;border:1px solid #2a3d63;border-radius:14px;padding:12px;margin-bottom:10px}
+.panel.active{display:block}
+.panel h3{font-size:14px;color:#c9a227;margin-bottom:10px}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.btn{border:0;border-radius:10px;padding:11px 12px;font-size:12px;font-weight:800;cursor:pointer;background:#fff;color:#0b1830}
+.btn.gold{background:#c9a227;color:#0b1830}
+.btn.dark{background:#0b1830;color:#fff;border:1px solid #2a3d63}
+.btn.green{background:#1e7a4c;color:#fff}
+.btn.red{background:#a33327;color:#fff}
+.btn:disabled{opacity:.45;cursor:default}
+.el-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.el-grid button{border:1px solid #2a3d63;background:#0e1c3d;color:#fff;border-radius:10px;padding:10px 4px;font-size:11px;font-weight:700;cursor:pointer}
+.el-grid button:active{background:#c9a227;color:#0b1830}
+label.lbl{display:block;font-size:11px;color:#9fb0cc;margin:8px 0 4px;font-weight:700}
+.swatches{display:flex;gap:8px;flex-wrap:wrap}
+.swatch{width:38px;height:38px;border-radius:8px;border:2px solid transparent;cursor:pointer}
+.swatch.sel{border-color:#c9a227}
+input[type=range]{width:100%}
+input[type=text],input[type=password],textarea,select{width:100%;border-radius:9px;border:1px solid #2a3d63;background:#0e1c3d;color:#fff;padding:10px 12px;font-size:13px;outline:none}
+textarea{min-height:70px;resize:vertical}
+.hint{font-size:11px;color:#9fb0cc;line-height:1.5;margin-top:8px}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.chips button{border:1px solid #2a3d63;background:#0e1c3d;color:#fff;border-radius:20px;padding:7px 11px;font-size:11px;cursor:pointer}
+#aiResult{max-width:100%;border-radius:10px;margin-top:10px;display:none}
+.kv{font-size:12px;color:#9fb0cc;margin:6px 0}
+.kv b{color:#fff}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#c9a227;color:#0b1830;font-weight:800;font-size:13px;padding:11px 18px;border-radius:24px;display:none;z-index:99;box-shadow:0 4px 16px rgba(0,0,0,.4);max-width:92vw;text-align:center}
+.selbar{display:none;background:#0e1c3d;border:1px solid #c9a227;border-radius:10px;padding:10px;margin-bottom:10px}
+.selbar.show{display:block}
+@media(min-width:900px){
+  .el-grid{grid-template-columns:repeat(8,1fr)}
+  .brand-title{font-size:21px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="brand">
+    <div class="brand-logo">H</div>
+    <div>
+      <div class="brand-title">BUILDING DESIGN VISUALIZER</div>
+      <div class="brand-sub">Hassan Aluminium &mdash; Photo Mockup + AI Edit</div>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button id="tabBtnPhoto" class="active" onclick="showTab('photo')">📷 Photo</button>
+    <button id="tabBtnElements" onclick="showTab('elements')">🪟 Windows &amp; Doors</button>
+    <button id="tabBtnPaint" onclick="showTab('paint')">🎨 Paint &amp; Texture</button>
+    <button id="tabBtnAi" onclick="showTab('ai')">✨ AI Edit</button>
+  </div>
+
+  <div class="canvas-card">
+    <canvas id="cv" width="900" height="1200"></canvas>
+  </div>
+
+  <div id="selBar" class="selbar">
+    <div class="kv">Selected: <b id="selName">—</b></div>
+    <label class="lbl">Frame / Body colour</label>
+    <div class="swatches" id="frameSwatches"></div>
+    <label class="lbl">Glass colour</label>
+    <div class="swatches" id="glassSwatches"></div>
+    <label class="lbl">Width</label>
+    <input type="range" id="selW" min="20" max="800" value="200" oninput="selResize()">
+    <label class="lbl">Height</label>
+    <input type="range" id="selH" min="20" max="800" value="200" oninput="selResize()">
+    <div class="row" style="margin-top:10px">
+      <button class="btn" onclick="duplicateSel()">⧉ Duplicate</button>
+      <button class="btn red" onclick="deleteSel()">🗑 Delete</button>
+    </div>
+  </div>
+
+  <!-- PHOTO TAB -->
+  <div id="tab-photo" class="panel active">
+    <h3>Building Photo</h3>
+    <div class="row">
+      <button class="btn gold" onclick="document.getElementById('photoInput').click()">📷 Upload Photo</button>
+      <input id="photoInput" type="file" accept="image/*" style="display:none" onchange="loadPhoto(event)">
+      <button class="btn green" onclick="downloadDesign()">⬇ Download Design</button>
+      <button class="btn red" onclick="clearAll()">🧹 Clear All</button>
+    </div>
+    <div class="hint">Apni building ki photo upload karein. Phir upar tabs se windows, doors, paint waghera lagayein. Aakhri design download karke customer ko dikhayein ya WhatsApp karein.</div>
+  </div>
+
+  <!-- ELEMENTS TAB -->
+  <div id="tab-elements" class="panel">
+    <h3>Add Windows, Doors &amp; More</h3>
+    <div class="el-grid">
+      <button onclick="addElement('sliding')">↔ Sliding Window</button>
+      <button onclick="addElement('openable')">⊞ Openable Window</button>
+      <button onclick="addElement('fixed')">▭ Fixed Window</button>
+      <button onclick="addElement('door')">🚪 Main Door</button>
+      <button onclick="addElement('grill')">♯ Safety Grill</button>
+      <button onclick="addElement('blinds')">☰ Window Blinds</button>
+      <button onclick="addElement('railing')">⫿ Steel Railing</button>
+      <button onclick="document.getElementById('customInput').click()">⬆ My Design</button>
+      <input id="customInput" type="file" accept="image/*" style="display:none" onchange="loadCustom(event)">
+    </div>
+    <div class="hint">Kisi item pe tap karein — wo canvas pe aa jayega. Phir ungli/mouse se <b>drag</b> karke jagah badlein, neeche kone se <b>resize</b> karein. Select karne pe colour aur size ke options khul jayenge.</div>
+  </div>
+
+  <!-- PAINT TAB -->
+  <div id="tab-paint" class="panel">
+    <h3>Paint, Tiles, Marble &amp; More</h3>
+    <label class="lbl">Paint / Texture</label>
+    <div class="swatches" id="paintSwatches"></div>
+    <div class="row" style="margin-top:10px">
+      <button class="btn gold" id="brushBtn" onclick="toggleBrush()">🖌 Brush: OFF</button>
+      <button class="btn" onclick="undoStroke()">↩ Undo Stroke</button>
+      <button class="btn red" onclick="clearPaint()">Clear Paint</button>
+    </div>
+    <label class="lbl">Brush size</label>
+    <input type="range" id="brushSize" min="10" max="160" value="60" oninput="brush.size=this.value">
+    <label class="lbl">Opacity</label>
+    <input type="range" id="brushOpacity" min="10" max="100" value="85" oninput="brush.opacity=this.value">
+    <div class="hint">Brush ON karke photo pe ungli pherein — deewar pe paint lag jayega. Texture me <b>Tiles, Marble, Wallpaper, Wall Paneling</b> bhi hain. Galti ho to Undo dabayein.</div>
+  </div>
+
+  <!-- AI TAB -->
+  <div id="tab-ai" class="panel">
+    <h3>AI Photo Edit (Gemini)</h3>
+    <label class="lbl">Gemini API Key (sirf aapke mobile me save rehti hai)</label>
+    <input type="password" id="apiKey" placeholder="AI Studio se free key yahan paste karein">
+    <div class="row" style="margin-top:8px">
+      <button class="btn dark" onclick="saveKey()">💾 Save Key</button>
+      <button class="btn dark" onclick="clearKey()">Clear</button>
+    </div>
+    <div class="chips">
+      <button onclick="setPrompt('Add modern aluminium sliding windows with champagne frames to this building')">Sliding windows lagao</button>
+      <button onclick="setPrompt('Change the wall paint to a clean off-white colour, keep everything else the same')">Paint badlo</button>
+      <button onclick="setPrompt('Add an elegant glass and steel railing to the terrace')">Terrace railing</button>
+      <button onclick="setPrompt('Add a stylish main entrance door with glass panels')">Main door</button>
+    </div>
+    <label class="lbl">Apna prompt likhein</label>
+    <textarea id="aiPrompt" placeholder="e.g. Is building me neele sheeshe wali aluminium windows lagao..."></textarea>
+    <div class="row" style="margin-top:10px">
+      <button class="btn gold" id="aiBtn" onclick="aiGenerate()">✨ AI se Edit karo</button>
+    </div>
+    <img id="aiResult" alt="AI result">
+    <div class="row" id="aiActions" style="display:none;margin-top:8px">
+      <button class="btn green" onclick="downloadAi()">⬇ Download</button>
+      <button class="btn" onclick="useAiAsPhoto()">🖼 Isay photo banao</button>
+    </div>
+    <div class="hint">Key banane ke liye: <b>aistudio.google.com</b> → Get API Key (free). Key aapke browser se bahar kahin nahi jati — sirf Google ko request me jati hai. Internet darkar hai.</div>
+  </div>
+
+</div>
+<div id="toast"></div>
+<script>
+"use strict";
+/* ================= STATE ================= */
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+let photo = null;
+let elements = [];
+let paintStrokes = [];
+let selectedId = null;
+let elSeq = 0;
+let brushMode = false;
+let brush = { color:"#f3ede0", size:60, opacity:85, texture:"solid" };
+let currentStroke = null;
+let dragState = null;
+let aiResultData = null;
+
+const FRAME_COLORS = ["#f5f5f5","#1a1a1a","#c9a227","#8b5a2b","#b08d57","#9aa0a6","#5b3a1e","#7a1f1f"];
+const GLASS_COLORS = ["#bfe3f0","#7fb8d9","#9fd6b0","#d9b77f","#e8ecef","#2b3a42"];
+const PAINTS = [
+  {n:"Off White", c:"#f3ede0", t:"solid"},
+  {n:"White", c:"#ffffff", t:"solid"},
+  {n:"Cream", c:"#f0dfb8", t:"solid"},
+  {n:"Grey", c:"#b9bec6", t:"solid"},
+  {n:"Terracotta", c:"#c96f4a", t:"solid"},
+  {n:"Olive", c:"#8a8f6a", t:"solid"},
+  {n:"Sky", c:"#a9cbe0", t:"solid"},
+  {n:"Tiles", c:"#dfe5ea", t:"tile"},
+  {n:"Marble", c:"#eef0f2", t:"marble"},
+  {n:"Wallpaper", c:"#e6d9c8", t:"wallpaper"},
+  {n:"Paneling", c:"#c8a97e", t:"paneling"}
+];
+
+/* ================= UTILS ================= */
+function $(id){ return document.getElementById(id); }
+function toast(msg){
+  const t = $("toast");
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>{ t.style.display = "none"; }, 2200);
+}
+function uid(){ return "el" + (++elSeq) + Date.now().toString(36); }
+
+/* ================= TABS ================= */
+function showTab(name){
+  ["photo","elements","paint","ai"].forEach(n => {
+    $("tab-"+n).classList.toggle("active", n === name);
+    $("tabBtn"+n[0].toUpperCase()+n.slice(1)).classList.toggle("active", n === name);
+  });
+  if(name !== "paint" && brushMode){ toggleBrush(); }
+}
+
+/* ================= TEXTURE PATTERNS ================= */
+function makePattern(type, base){
+  const c = document.createElement("canvas");
+  c.width = c.height = 80;
+  const g = c.getContext("2d");
+  g.fillStyle = base; g.fillRect(0,0,80,80);
+  if(type === "tile"){
+    g.strokeStyle = "rgba(90,95,105,.55)"; g.lineWidth = 3;
+    for(let i=0;i<=80;i+=40){
+      g.beginPath(); g.moveTo(i,0); g.lineTo(i,80); g.stroke();
+      g.beginPath(); g.moveTo(0,i); g.lineTo(80,i); g.stroke();
+    }
+    g.fillStyle = "rgba(255,255,255,.25)"; g.fillRect(2,2,36,36);
+  }else if(type === "marble"){
+    g.strokeStyle = "rgba(120,125,135,.4)"; g.lineWidth = 1.5;
+    for(let i=0;i<7;i++){
+      g.beginPath();
+      let x = Math.random()*80, y = 0;
+      g.moveTo(x,y);
+      for(let s=0;s<4;s++){ x += (Math.random()-.5)*40; y += 20+Math.random()*15; g.quadraticCurveTo(x+(Math.random()-.5)*20, y-10, x, y); }
+      g.stroke();
+    }
+  }else if(type === "wallpaper"){
+    g.fillStyle = "rgba(150,120,90,.35)";
+    for(let x=0;x<80;x+=20){ g.fillRect(x,0,8,80); }
+    g.fillStyle = "rgba(255,255,255,.2)";
+    for(let x=10;x<80;x+=20){ g.fillRect(x,0,2,80); }
+  }else if(type === "paneling"){
+    g.fillStyle = "rgba(90,60,30,.45)";
+    for(let x=0;x<80;x+=26){ g.fillRect(x,0,4,80); }
+    g.fillStyle = "rgba(255,255,255,.18)";
+    for(let x=6;x<80;x+=26){ g.fillRect(x,0,14,70); }
+  }
+  return ctx.createPattern(c, "repeat");
+}
+function brushStyle(){
+  if(brush.texture === "solid"){ return brush.color; }
+  return makePattern(brush.texture, brush.color);
+}
+
+/* ================= PHOTO ================= */
+function loadPhoto(e){
+  const f = e.target.files[0];
+  if(!f){ return; }
+  const img = new Image();
+  img.onload = function(){
+    const maxDim = 1600;
+    const sc = Math.min(1, maxDim / Math.max(img.width, img.height));
+    cv.width = Math.round(img.width * sc);
+    cv.height = Math.round(img.height * sc);
+    photo = img;
+    elements = []; paintStrokes = []; selectedId = null;
+    updateSelBar();
+    render();
+    toast("Photo loaded — ab windows/paint lagayein");
+    e.target.value = "";
+  };
+  img.src = URL.createObjectURL(f);
+}
+function loadCustom(e){
+  const f = e.target.files[0];
+  if(!f){ return; }
+  const img = new Image();
+  img.onload = function(){
+    const w = Math.min(cv.width*0.4, img.width);
+    const h = w * img.height / img.width;
+    elements.push({
+      id:uid(), type:"custom", name:"My Design",
+      x:(cv.width-w)/2, y:(cv.height-h)/2, w, h,
+      frame:FRAME_COLORS[0], glass:GLASS_COLORS[0], img
+    });
+    selectEl(elements[elements.length-1].id);
+    render();
+    toast("Design lag gaya — drag karke set karein");
+    e.target.value = "";
+  };
+  img.src = URL.createObjectURL(f);
+}
+
+/* ================= ELEMENT DRAWING ================= */
+function drawGlass(g, x, y, w, h, glass){
+  g.fillStyle = glass; g.fillRect(x, y, w, h);
+  g.save();
+  g.beginPath(); g.rect(x, y, w, h); g.clip();
+  g.fillStyle = "rgba(255,255,255,.35)";
+  g.beginPath();
+  g.moveTo(x, y+h); g.lineTo(x+w*0.45, y); g.lineTo(x+w*0.7, y); g.lineTo(x+w*0.25, y+h);
+  g.closePath(); g.fill();
+  g.restore();
+}
+function drawWindow(g, el){
+  const {x, y, w, h} = el;
+  const fw = Math.max(4, w*0.055);
+  g.fillStyle = el.frame; g.fillRect(x, y, w, h);
+  drawGlass(g, x+fw, y+fw, w-2*fw, h-2*fw, el.glass);
+  g.fillStyle = el.frame;
+  if(el.type === "sliding"){
+    const cx = x + w/2 - fw/2;
+    g.fillRect(cx, y+fw, fw, h-2*fw);
+    g.fillStyle = "rgba(0,0,0,.35)";
+    g.fillRect(x+w/2-14, y+h/2-16, 5, 32);
+    g.fillRect(x+w/2+9, y+h/2-16, 5, 32);
+  }else if(el.type === "openable"){
+    g.fillRect(x+w/2-fw/2, y+fw, fw, h-2*fw);
+    g.fillRect(x+fw, y+h/2-fw/2, w-2*fw, fw);
+  }
+  g.strokeStyle = "rgba(0,0,0,.4)"; g.lineWidth = 2;
+  g.strokeRect(x+1, y+1, w-2, h-2);
+}
+function drawDoor(g, el){
+  const {x, y, w, h} = el;
+  const fw = Math.max(5, w*0.07);
+  g.fillStyle = el.frame; g.fillRect(x, y, w, h);
+  const px = x+fw, py = y+fw, pw = w-2*fw, ph = h-2*fw;
+  g.fillStyle = shade(el.frame, -18); g.fillRect(px, py, pw, ph);
+  g.strokeStyle = "rgba(0,0,0,.45)"; g.lineWidth = 2;
+  const panels = 3;
+  for(let i=0;i<panels;i++){
+    const phh = ph/panels;
+    g.strokeRect(px+pw*0.12, py+phh*i+phh*0.14, pw*0.76, phh*0.72);
+  }
+  g.fillStyle = "#d8dee6";
+  g.beginPath(); g.arc(x+w*0.82, y+h*0.52, Math.max(4,w*0.025), 0, 7); g.fill();
+  g.strokeStyle = "rgba(0,0,0,.4)";
+  g.strokeRect(x+1, y+1, w-2, h-2);
+}
+function drawGrill(g, el){
+  const {x, y, w, h} = el;
+  const fw = Math.max(4, w*0.05);
+  g.fillStyle = el.frame; g.fillRect(x, y, w, h);
+  g.fillStyle = "rgba(20,22,28,.92)";
+  g.fillRect(x+fw, y+fw, w-2*fw, h-2*fw);
+  g.strokeStyle = "#3d434e"; g.lineWidth = Math.max(2, w*0.02);
+  const n = Math.max(3, Math.round(w/28));
+  for(let i=1;i<n;i++){
+    const bx = x+fw + (w-2*fw)*i/n;
+    g.beginPath(); g.moveTo(bx, y+fw); g.lineTo(bx, y+h-fw); g.stroke();
+  }
+  g.beginPath(); g.moveTo(x+fw, y+h/2); g.lineTo(x+w-fw, y+h/2); g.stroke();
+}
+function drawBlinds(g, el){
+  const {x, y, w, h} = el;
+  const fw = Math.max(4, w*0.05);
+  g.fillStyle = el.frame; g.fillRect(x, y, w, h);
+  g.fillStyle = "#e9e4d8"; g.fillRect(x+fw, y+fw, w-2*fw, h-2*fw);
+  g.strokeStyle = "rgba(120,110,95,.7)"; g.lineWidth = 2;
+  for(let yy=y+fw+8; yy<y+h-fw; yy+=11){
+    g.beginPath(); g.moveTo(x+fw+2, yy); g.lineTo(x+w-fw-2, yy); g.stroke();
+  }
+  g.strokeStyle = "rgba(0,0,0,.4)";
+  g.strokeRect(x+1, y+1, w-2, h-2);
+}
+function drawRailing(g, el){
+  const {x, y, w, h} = el;
+  const railH = Math.max(6, h*0.09);
+  const grad = g.createLinearGradient(0, y, 0, y+h);
+  grad.addColorStop(0, "#e8edf2"); grad.addColorStop(1, "#9aa4ae");
+  g.fillStyle = grad;
+  g.fillRect(x, y, w, railH);
+  g.fillRect(x, y+h-railH, w, railH);
+  const n = Math.max(2, Math.round(w/34));
+  for(let i=0;i<=n;i++){
+    const bx = x + w*i/n - 3;
+    g.fillRect(bx, y+railH, 6, h-2*railH);
+  }
+  drawGlass(g, x, y+railH, w, h-2*railH, "rgba(160,200,220,.28)");
+}
+function shade(hex, amt){
+  const n = parseInt(hex.slice(1), 16);
+  let r = (n>>16)+amt, gg = ((n>>8)&255)+amt, b = (n&255)+amt;
+  r = Math.max(0,Math.min(255,r)); gg = Math.max(0,Math.min(255,gg)); b = Math.max(0,Math.min(255,b));
+  return "#"+((r<<16)|(gg<<8)|b).toString(16).padStart(6,"0");
+}
+function drawElement(g, el){
+  if(el.type === "custom" && el.img){
+    g.drawImage(el.img, el.x, el.y, el.w, el.h);
+    return;
+  }
+  if(el.type === "door"){ drawDoor(g, el); return; }
+  if(el.type === "grill"){ drawGrill(g, el); return; }
+  if(el.type === "blinds"){ drawBlinds(g, el); return; }
+  if(el.type === "railing"){ drawRailing(g, el); return; }
+  drawWindow(g, el);
+}
+const EL_NAMES = {sliding:"Sliding Window",openable:"Openable Window",fixed:"Fixed Window",door:"Main Door",grill:"Safety Grill",blinds:"Window Blinds",railing:"Steel Railing",custom:"My Design"};
+
+/* ================= RENDER ================= */
+function render(){
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  ctx.fillStyle = "#e8ecf2"; ctx.fillRect(0, 0, cv.width, cv.height);
+  if(!photo){
+    ctx.fillStyle = "#8a93a5";
+    ctx.font = "600 26px system-ui";
+    ctx.textAlign = "center";
+    ctx.fillText("📷  Upload a building photo to start", cv.width/2, cv.height/2);
+    ctx.font = "15px system-ui";
+    ctx.fillText("Photo tab → Upload Photo", cv.width/2, cv.height/2+36);
+    return;
+  }
+  ctx.drawImage(photo, 0, 0, cv.width, cv.height);
+  paintStrokes.forEach(st => {
+    ctx.save();
+    ctx.globalAlpha = st.opacity/100;
+    ctx.strokeStyle = st.style;
+    ctx.lineWidth = st.size;
+    ctx.lineCap = "round"; ctx.lineJoin = "round";
+    ctx.beginPath();
+    st.points.forEach((p,i) => { i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y); });
+    ctx.stroke();
+    ctx.restore();
+  });
+  elements.forEach(el => drawElement(ctx, el));
+  const sel = elements.find(e => e.id === selectedId);
+  if(sel){
+    ctx.save();
+    ctx.strokeStyle = "#c9a227"; ctx.lineWidth = 3;
+    ctx.setLineDash([8,5]);
+    ctx.strokeRect(sel.x-4, sel.y-4, sel.w+8, sel.h+8);
+    ctx.setLineDash([]);
+    ctx.fillStyle = "#c9a227";
+    ctx.fillRect(sel.x+sel.w-14, sel.y+sel.h-14, 28, 28);
+    ctx.fillStyle = "#0b1830";
+    ctx.font = "bold 18px system-ui"; ctx.textAlign = "center";
+    ctx.fillText("⤡", sel.x+sel.w, sel.y+sel.h+6);
+    ctx.restore();
+  }
+}
+
+/* ================= ELEMENT OPS ================= */
+function addElement(type){
+  if(!photo){ toast("Pehle photo upload karein"); showTab("photo"); return; }
+  const base = Math.min(cv.width, cv.height);
+  const sizes = {
+    sliding:[0.24,0.18], openable:[0.2,0.2], fixed:[0.24,0.16],
+    door:[0.14,0.3], grill:[0.24,0.18], blinds:[0.2,0.22], railing:[0.5,0.12]
+  };
+  const [wr, hr] = sizes[type] || [0.2,0.2];
+  const w = base*wr, h = base*hr;
+  elements.push({
+    id:uid(), type, name:EL_NAMES[type],
+    x:(cv.width-w)/2, y:(cv.height-h)/2, w, h,
+    frame:FRAME_COLORS[0], glass:GLASS_COLORS[0]
+  });
+  selectEl(elements[elements.length-1].id);
+  render();
+}
+function selectEl(id){
+  selectedId = id;
+  updateSelBar();
+}
+function getSel(){ return elements.find(e => e.id === selectedId) || null; }
+function deleteSel(){
+  elements = elements.filter(e => e.id !== selectedId);
+  selectedId = null; updateSelBar(); render();
+}
+function duplicateSel(){
+  const s = getSel(); if(!s){ return; }
+  const c = Object.assign({}, s, { id:uid(), x:s.x+24, y:s.y+24 });
+  elements.push(c); selectEl(c.id); render();
+}
+function selResize(){
+  const s = getSel(); if(!s){ return; }
+  s.w = Math.max(20, Number($("selW").value));
+  s.h = Math.max(20, Number($("selH").value));
+  render();
+}
+function updateSelBar(){
+  const s = getSel();
+  $("selBar").classList.toggle("show", !!s);
+  if(!s){ return; }
+  $("selName").textContent = s.name;
+  $("selW").value = Math.round(s.w);
+  $("selH").value = Math.round(s.h);
+  refreshFrameSwatches(s.frame);
+  buildSwatches($("glassSwatches"), GLASS_COLORS, s.glass, c => { s.glass = c; render(); refreshGlassSwatches(c); });
+}
+function refreshFrameSwatches(current){
+  const s = getSel(); if(!s){ return; }
+  buildSwatches($("frameSwatches"), FRAME_COLORS, current, c => { s.frame = c; render(); refreshFrameSwatches(c); });
+}
+function refreshGlassSwatches(current){
+  const s = getSel(); if(!s){ return; }
+  buildSwatches($("glassSwatches"), GLASS_COLORS, current, c => { s.glass = c; render(); refreshGlassSwatches(c); });
+}
+function buildSwatches(box, colors, current, onPick){
+  box.innerHTML = "";
+  colors.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "swatch" + (c === current ? " sel" : "");
+    d.style.background = c;
+    d.onclick = () => onPick(c);
+    box.appendChild(d);
+  });
+}
+
+/* ================= POINTER ================= */
+function toCanvas(e){
+  const r = cv.getBoundingClientRect();
+  return {
+    x:(e.clientX - r.left) * cv.width / r.width,
+    y:(e.clientY - r.top) * cv.height / r.height
+  };
+}
+function hitEl(p){
+  for(let i=elements.length-1;i>=0;i--){
+    const el = elements[i];
+    if(p.x >= el.x && p.x <= el.x+el.w && p.y >= el.y && p.y <= el.y+el.h){ return el; }
+  }
+  return null;
+}
+function hitHandle(p){
+  const s = getSel(); if(!s){ return false; }
+  return p.x >= s.x+s.w-16 && p.x <= s.x+s.w+16 && p.y >= s.y+s.h-16 && p.y <= s.y+s.h+16;
+}
+cv.addEventListener("pointerdown", e => {
+  if(!photo){ return; }
+  e.preventDefault();
+  const p = toCanvas(e);
+  if(brushMode){
+    currentStroke = { style:brushStyle(), size:Number(brush.size), opacity:Number(brush.opacity), points:[p] };
+    paintStrokes.push(currentStroke);
+    render();
+    return;
+  }
+  if(hitHandle(p)){ dragState = { mode:"resize" }; return; }
+  const el = hitEl(p);
+  if(el){
+    selectEl(el.id);
+    dragState = { mode:"move", dx:p.x-el.x, dy:p.y-el.y };
+  }else{
+    selectedId = null; updateSelBar();
+  }
+  render();
+});
+cv.addEventListener("pointermove", e => {
+  if(!photo){ return; }
+  const p = toCanvas(e);
+  if(currentStroke){
+    currentStroke.points.push(p);
+    render();
+    return;
+  }
+  if(!dragState){ return; }
+  const s = getSel(); if(!s){ dragState = null; return; }
+  e.preventDefault();
+  if(dragState.mode === "move"){
+    s.x = p.x - dragState.dx;
+    s.y = p.y - dragState.dy;
+  }else{
+    s.w = Math.max(20, p.x - s.x);
+    s.h = Math.max(20, p.y - s.y);
+    $("selW").value = Math.round(s.w);
+    $("selH").value = Math.round(s.h);
+  }
+  render();
+});
+window.addEventListener("pointerup", () => {
+  currentStroke = null;
+  dragState = null;
+});
+
+/* ================= PAINT ================= */
+function toggleBrush(){
+  if(!photo){ toast("Pehle photo upload karein"); return; }
+  brushMode = !brushMode;
+  $("brushBtn").textContent = brushMode ? "🖌 Brush: ON" : "🖌 Brush: OFF";
+  $("brushBtn").classList.toggle("gold", brushMode);
+  cv.style.cursor = brushMode ? "cell" : "crosshair";
+  toast(brushMode ? "Brush ON — photo pe pherein" : "Brush OFF");
+}
+function undoStroke(){ paintStrokes.pop(); render(); }
+function clearPaint(){ paintStrokes = []; render(); toast("Paint saaf kar diya"); }
+function initPaintSwatches(){
+  const box = $("paintSwatches");
+  PAINTS.forEach(p => {
+    const d = document.createElement("div");
+    d.className = "swatch" + (p.c === brush.color && p.t === brush.texture ? " sel" : "");
+    d.style.background = p.c;
+    d.title = p.n;
+    d.onclick = () => {
+      brush.color = p.c; brush.texture = p.t;
+      initPaintSwatches();
+      toast(p.n);
+    };
+    box.appendChild(d);
+  });
+}
+
+/* ================= EXPORT / CLEAR ================= */
+function downloadDesign(){
+  if(!photo){ toast("Pehle photo upload karein"); return; }
+  const a = document.createElement("a");
+  a.download = "building-design.png";
+  a.href = cv.toDataURL("image/png");
+  a.click();
+  toast("Design download ho gaya");
+}
+function clearAll(){
+  if(!confirm("Saari photo, items aur paint saaf kar dun?")){ return; }
+  photo = null; elements = []; paintStrokes = [];
+  selectedId = null; brushMode = false;
+  $("brushBtn").textContent = "🖌 Brush: OFF";
+  updateSelBar(); render();
+}
+
+/* ================= AI EDIT (GEMINI) ================= */
+function saveKey(){
+  const k = $("apiKey").value.trim();
+  if(!k){ toast("Pehle key paste karein"); return; }
+  try{ localStorage.setItem("bdv_gemini_key", k); }catch(e){}
+  toast("Key save ho gayi");
+}
+function clearKey(){
+  try{ localStorage.removeItem("bdv_gemini_key"); }catch(e){}
+  $("apiKey").value = "";
+  toast("Key clear ho gayi");
+}
+function setPrompt(t){ $("aiPrompt").value = t; }
+function photoBase64(maxDim){
+  const c = document.createElement("canvas");
+  const sc = Math.min(1, maxDim / Math.max(cv.width, cv.height));
+  c.width = Math.round(cv.width*sc); c.height = Math.round(cv.height*sc);
+  const g = c.getContext("2d");
+  g.drawImage(photo, 0, 0, c.width, c.height);
+  return c.toDataURL("image/jpeg", 0.85).split(",")[1];
+}
+function buildAiRequest(b64, prompt, key){
+  return {
+    url:"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=" + encodeURIComponent(key),
+    body:{
+      contents:[{
+        parts:[
+          { text: prompt + " IMPORTANT: Keep the photo photorealistic and keep the building, angle and surroundings exactly the same as the input photo. Only apply the requested change." },
+          { inlineData:{ mimeType:"image/jpeg", data:b64 } }
+        ]
+      }],
+      generationConfig:{ responseModalities:["IMAGE"] }
+    }
+  };
+}
+async function aiGenerate(){
+  const key = $("apiKey").value.trim();
+  const prompt = $("aiPrompt").value.trim();
+  if(!photo){ toast("Pehle photo upload karein"); showTab("photo"); return; }
+  if(!key){ toast("Pehle Gemini API key save karein"); return; }
+  if(!prompt){ toast("Prompt likhein — kya lagana hai?"); return; }
+  const btn = $("aiBtn");
+  btn.disabled = true; btn.textContent = "⏳ AI kaam kar raha hai...";
+  try{
+    const req = buildAiRequest(photoBase64(1024), prompt, key);
+    const res = await fetch(req.url, {
+      method:"POST",
+      headers:{ "Content-Type":"application/json" },
+      body:JSON.stringify(req.body)
+    });
+    if(!res.ok){
+      const err = await res.text();
+      throw new Error("HTTP " + res.status + " — " + err.slice(0,120));
+    }
+    const data = await res.json();
+    const parts = (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) || [];
+    const imgPart = parts.find(p => p.inlineData && p.inlineData.data);
+    if(!imgPart){ throw new Error("AI ne image nahi bheji"); }
+    aiResultData = "data:" + (imgPart.inlineData.mimeType || "image/png") + ";base64," + imgPart.inlineData.data;
+    const im = $("aiResult");
+    im.src = aiResultData; im.style.display = "block";
+    $("aiActions").style.display = "flex";
+    toast("AI design tayyar hai!");
+    im.scrollIntoView({ behavior:"smooth", block:"center" });
+  }catch(err){
+    toast("AI error: " + err.message);
+  }
+  btn.disabled = false; btn.textContent = "✨ AI se Edit karo";
+}
+function downloadAi(){
+  if(!aiResultData){ return; }
+  const a = document.createElement("a");
+  a.download = "ai-building-design.png";
+  a.href = aiResultData;
+  a.click();
+  toast("AI design download ho gaya");
+}
+function useAiAsPhoto(){
+  if(!aiResultData){ return; }
+  const img = new Image();
+  img.onload = function(){
+    const maxDim = 1600;
+    const sc = Math.min(1, maxDim / Math.max(img.width, img.height));
+    cv.width = Math.round(img.width*sc);
+    cv.height = Math.round(img.height*sc);
+    photo = img;
+    render();
+    showTab("photo");
+    toast("AI wali pic ab aapki photo hai");
+  };
+  img.src = aiResultData;
+}
+
+/* ================= INIT ================= */
+document.addEventListener("DOMContentLoaded", () => {
+  try{
+    const k = localStorage.getItem("bdv_gemini_key");
+    if(k){ $("apiKey").value = k; }
+  }catch(e){}
+  initPaintSwatches();
+  render();
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+});
+</script>
+</body>
+</html>

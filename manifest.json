@@ -1,0 +1,14 @@
+{
+  "name": "Building Design Visualizer",
+  "short_name": "Design Visual",
+  "description": "Building photo mockup: windows, doors, paint, tiles, marble + AI edit. Works offline.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0b1830",
+  "theme_color": "#0b1830",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
