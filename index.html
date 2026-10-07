@@ -154,7 +154,7 @@ textarea{min-height:70px;resize:vertical}
       <button onclick="setPrompt('Add a stylish main entrance door with glass panels')">Main door</button>
     </div>
     <label class="lbl">Apna prompt likhein</label>
-    <textarea id="aiPrompt" placeholder="e.g. Is building me neele sheeshe wali aluminium windows lagao..."></textarea>
+    <label class="lbl" for="aiModel">Model</label><input type="text" id="aiModel" value="gemini-3.1-flash-lite-image" style="margin-bottom:8px"><textarea id="aiPrompt" placeholder="e.g. Is building me neele sheeshe wali aluminium windows lagao..."></textarea>
     <div class="row" style="margin-top:10px">
       <button class="btn gold" id="aiBtn" onclick="aiGenerate()">✨ AI se Edit karo</button>
     </div>
@@ -648,7 +648,7 @@ function photoBase64(maxDim){
 }
 function buildAiRequest(b64, prompt, key){
   return {
-    url:"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent?key=" + encodeURIComponent(key),
+    url:"https://generativelanguage.googleapis.com/v1beta/models/"+(document.getElementById("aiModel").value.trim()||"gemini-3.1-flash-lite-image")+":generateContent?key=" + encodeURIComponent(key),
     body:{
       contents:[{
         parts:[
